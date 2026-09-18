@@ -1,0 +1,32 @@
+name: "Setup Rust"
+description: "Rust cache plus optional target and components. Caller must checkout the repo first."
+inputs:
+  key:
+    description: "Rust cache shared key"
+    required: false
+    default: global-rust-cache
+  target:
+    description: "Rustup target to add; empty builds for the host only"
+    required: false
+    default: ""
+  components:
+    description: "Rustup components to add; empty skips component installation"
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Add Rust target
+      if: inputs.target != ''
+      shell: bash
+      run: rustup target add ${{ inputs.target }}
+
+    - name: Add Rust components
+      if: inputs.components != ''
+      shell: bash
+      run: rustup component add ${{ inputs.components }}
+
+    - name: Rust cache
+      uses: swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+      with:
+        shared-key: ${{ inputs.key }}
