@@ -113,3 +113,9 @@ zig = ["dep:tree-sitter-zig"]
 strip = true
 lto = "thin"
 codegen-units = 1
+
+# Release codegen with symbols, for profiling: `cargo build --profile release-debug`.
+[profile.release-debug]
+inherits = "release"
+debug = true
+strip = false
