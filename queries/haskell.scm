@@ -29,7 +29,7 @@
 (data_type name: (name) @name) @definition.class
 (newtype name: (name) @name) @definition.class
 (class name: (name) @name) @definition.interface
-(type_synomym name: (name) @name) @definition.type
+(type_synonym name: (name) @name) @definition.type
 
 ; Families and their instances.
 
