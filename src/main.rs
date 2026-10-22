@@ -36,17 +36,17 @@ EXAMPLES:
   nvim -q <(rt bad_request --vimgrep)  Every site as a quickfix list
 
 A record format (--vimgrep, -l) prints no heading, no count and no prose, and
-a miss prints nothing at all: exit 1 says it. -q prints nothing either way.
+a miss prints nothing at all and exits 1. -q prints nothing either way.
 --limit 0 lifts the per-group cap, and -0 ends each record with NUL for
 `xargs -0`.
 
-The walk reads what git would: no hidden files, nothing .gitignore excludes,
-nothing over 1M. --hidden, --no-ignore (-u, -uu) and --max-filesize widen it,
+By default the walk skips hidden files, anything .gitignore excludes, and
+anything over 1M. --hidden, --no-ignore (-u, -uu) and --max-filesize widen it,
 and each widened walk keeps an index of its own.
 
-A query answers from the index without checking the tree, which is what makes
-it cost milliseconds. A query that finds nothing checks the tree before saying
-so, and the index is refreshed in the background afterwards. Use --fresh to
+A query searches the index without checking the tree, which keeps it to
+milliseconds. A query that finds nothing checks the tree before reporting a
+miss, and the index is refreshed in the background afterwards. Use --fresh to
 check first, or leave `rt --watch` running to keep the index current.";
 
 /// One-screen help for coding agents, in place of clap's prose.
@@ -173,7 +173,7 @@ struct Args {
     #[arg(long, help_heading = "OUTPUT")]
     json: bool,
 
-    /// Print nothing: the exit code says whether anything matched
+    /// Print nothing; the exit code reports whether anything matched
     #[arg(short = 'q', long, help_heading = "OUTPUT")]
     quiet: bool,
 
@@ -189,7 +189,7 @@ struct Args {
     #[arg(long = "no-ignore", help_heading = "FILTER")]
     no_ignore: bool,
 
-    /// Filter less: `-u` indexes ignored files, `-uu` hidden ones as well
+    /// Filter less, with `-u` indexing ignored files and `-uu` hidden ones as well
     #[arg(
         short = 'u',
         long = "unrestricted",
@@ -247,7 +247,7 @@ struct Args {
     #[arg(long)]
     fresh: bool,
 
-    /// Ignore the persisted index: scan the tree and write nothing
+    /// Ignore the persisted index, scanning the tree and writing nothing
     #[arg(long = "no-cache")]
     no_cache: bool,
 
