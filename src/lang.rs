@@ -177,6 +177,10 @@ pub struct Lang {
     pub(crate) query: Query,
     pub(crate) roles: Vec<CaptureRole>,
     pub(crate) scopes: &'static [ScopeRule],
+    /// Whether any scope rule names each node kind, indexed by
+    /// `Node::kind_id`, so most ancestors are ruled out without reading
+    /// their kind name. `ERROR` nodes carry an id past the end.
+    scope_kinds: Vec<bool>,
 }
 
 impl Lang {
@@ -192,9 +196,15 @@ impl Lang {
         node: tree_sitter::Node<'a>,
         source: &'a str,
     ) -> impl Iterator<Item = &'a ScopeRule> {
-        self.scopes
+        let opens = self.scope_kinds.get(usize::from(node.kind_id()));
+        let (rules, kind) = if opens == Some(&true) {
+            (self.scopes, node.kind())
+        } else {
+            (&[][..], "")
+        };
+        rules
             .iter()
-            .filter(move |rule| rule.node == node.kind() && rule.opens(node, source))
+            .filter(move |rule| rule.node == kind && rule.opens(node, source))
     }
 }
 
@@ -457,12 +467,20 @@ fn compile(id: LangId) -> Result<Lang, tree_sitter::QueryError> {
         roles.contains(&CaptureRole::Name),
         "{id:?} tag query must capture @name"
     );
+    let scope_kinds = (0..language.node_kind_count() as u16)
+        .map(|kind| {
+            language
+                .node_kind_for_id(kind)
+                .is_some_and(|name| spec.scopes.iter().any(|rule| rule.node == name))
+        })
+        .collect();
     Ok(Lang {
         id,
         language,
         query,
         roles,
         scopes: spec.scopes,
+        scope_kinds,
     })
 }
 

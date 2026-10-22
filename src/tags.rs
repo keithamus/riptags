@@ -100,7 +100,7 @@ impl<'a> Tagger<'a> {
                 continue;
             }
 
-            let scopes = self.scopes(name_node);
+            let scopes = self.scopes(tree.root_node(), name_node);
             let qualified = match qualifier {
                 Some(node) => scopes.resolve_qualifier(self.text(node)),
                 None => Vec::new(),
@@ -143,10 +143,21 @@ impl<'a> Tagger<'a> {
     ///
     /// The definition that the identifier itself names is skipped, so a
     /// method's own name does not become its own context.
-    fn scopes(&self, node: Node<'_>) -> Scopes<'a> {
+    ///
+    /// The ancestors are found in one descent from `root`: `Node::parent`
+    /// descends from the root on every call, which made a deep node quadratic.
+    fn scopes(&self, root: Node<'_>, node: Node<'_>) -> Scopes<'a> {
+        let mut ancestors = Vec::new();
+        let mut current = root;
+        while current != node {
+            ancestors.push(current);
+            match current.child_with_descendant(node) {
+                Some(child) => current = child,
+                None => break,
+            }
+        }
         let mut scopes = Vec::new();
-        let mut current = node.parent();
-        while let Some(parent) = current {
+        for parent in ancestors.into_iter().rev() {
             for rule in self.lang.scope_rules(parent, self.source) {
                 let mut names: Vec<&str> = Vec::new();
                 for field in rule.name_fields {
@@ -196,7 +207,6 @@ impl<'a> Tagger<'a> {
                     });
                 }
             }
-            current = parent.parent();
         }
         Scopes(scopes)
     }
