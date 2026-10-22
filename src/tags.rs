@@ -66,6 +66,7 @@ impl<'a> Tagger<'a> {
 
         let mut columns = Columns::default();
         let mut tags: Vec<Tag> = Vec::new();
+        let mut ancestors: Vec<Node> = Vec::new();
         let mut cursor = QueryCursor::new();
         let mut matches = cursor.matches(&lang.query, tree.root_node(), self.source.as_bytes());
 
@@ -100,7 +101,7 @@ impl<'a> Tagger<'a> {
                 continue;
             }
 
-            let scopes = self.scopes(tree.root_node(), name_node);
+            let scopes = self.scopes(&mut ancestors, tree.root_node(), name_node);
             let qualified = match qualifier {
                 Some(node) => scopes.resolve_qualifier(self.text(node)),
                 None => Vec::new(),
@@ -144,11 +145,24 @@ impl<'a> Tagger<'a> {
     /// The definition that the identifier itself names is skipped, so a
     /// method's own name does not become its own context.
     ///
-    /// The ancestors are found in one descent from `root`: `Node::parent`
-    /// descends from the root on every call, which made a deep node quadratic.
-    fn scopes(&self, root: Node<'_>, node: Node<'_>) -> Scopes<'a> {
-        let mut ancestors = Vec::new();
-        let mut current = root;
+    /// `ancestors` holds the previous tag's ancestors, outermost first; the
+    /// ones that still enclose `node` are kept and the rest of the chain is
+    /// found by descending from the deepest of them. `Node::parent` descends
+    /// from the root on every call, which made a deep node quadratic, and
+    /// tags mostly arrive in source order, so neighbours share most of their
+    /// chain.
+    fn scopes<'tree>(
+        &self,
+        ancestors: &mut Vec<Node<'tree>>,
+        root: Node<'tree>,
+        node: Node<'tree>,
+    ) -> Scopes<'a> {
+        let shared = ancestors
+            .iter()
+            .take_while(|ancestor| **ancestor != node && encloses(**ancestor, node))
+            .count();
+        ancestors.truncate(shared);
+        let mut current = ancestors.pop().unwrap_or(root);
         while current != node {
             ancestors.push(current);
             match current.child_with_descendant(node) {
@@ -157,7 +171,7 @@ impl<'a> Tagger<'a> {
             }
         }
         let mut scopes = Vec::new();
-        for parent in ancestors.into_iter().rev() {
+        for &parent in ancestors.iter().rev() {
             for rule in self.lang.scope_rules(parent, self.source) {
                 let mut names: Vec<&str> = Vec::new();
                 for field in rule.name_fields {
