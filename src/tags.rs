@@ -72,16 +72,18 @@ impl<'a> Tagger<'a> {
         while let Some(m) = matches.next() {
             let mut name_node: Option<Node> = None;
             let mut qualifier: Option<Node> = None;
-            let mut record: Option<(OccKind, SymKind)> = None;
+            let mut record: Option<(OccKind, SymKind, Node)> = None;
             for capture in m.captures() {
                 match lang.roles.get(capture.index as usize) {
                     Some(CaptureRole::Name) => name_node = Some(capture.node),
                     Some(CaptureRole::Qualifier) => qualifier = Some(capture.node),
-                    Some(CaptureRole::Record(kind, sym_kind)) => record = Some((*kind, *sym_kind)),
+                    Some(CaptureRole::Record(kind, sym_kind)) => {
+                        record = Some((*kind, *sym_kind, capture.node))
+                    }
                     _ => {}
                 }
             }
-            let (Some(name_node), Some((kind, sym_kind))) = (name_node, record) else {
+            let (Some(name_node), Some((kind, sym_kind, record_node))) = (name_node, record) else {
                 continue;
             };
             // A C++ definition may name a path (`void net::Socket::open() {}`):
@@ -116,8 +118,13 @@ impl<'a> Tagger<'a> {
             let start = name_node.end_byte() - name.len();
             let point = name_node.start_position();
             let line_start = name_node.start_byte() - point.column;
+            let line = point.row as u32 + 1;
             tags.push(Tag {
-                line: point.row as u32 + 1,
+                line,
+                end_line: match kind.is_definition() {
+                    true => line.max(last_line(record_node)),
+                    false => line,
+                },
                 col: columns.at(self.source, line_start, start),
                 len: name.chars().count() as u32,
                 kind,
@@ -254,6 +261,16 @@ fn encloses(outer: Node<'_>, inner: Node<'_>) -> bool {
     outer.start_byte() <= inner.start_byte() && inner.end_byte() <= outer.end_byte()
 }
 
+/// The 1-based line `node` ends on. A node that swallows its trailing newline
+/// ends at column 0 of the next line, which it does not occupy.
+fn last_line(node: Node<'_>) -> u32 {
+    let end = node.end_position();
+    match end.column == 0 && end.row > node.start_position().row {
+        true => end.row as u32,
+        false => end.row as u32 + 1,
+    }
+}
+
 /// Split a C++ path (`net::http::Client::send`) into the node that carries
 /// the last segment and the node that names its owner.
 fn innermost_name<'tree>(node: Node<'tree>) -> Option<(Node<'tree>, Option<Node<'tree>>)> {
@@ -357,7 +374,8 @@ impl Columns {
 }
 
 /// Collapse occurrences that several query patterns matched at the same token,
-/// keeping the most specific record kind and any owner that was found.
+/// keeping the most specific record kind, any owner that was found, and the
+/// widest definition extent.
 fn dedupe(mut tags: Vec<Tag>) -> Vec<Tag> {
     tags.sort_by_key(|tag| (tag.line, tag.col, tag.kind as u8));
     let mut out: Vec<Tag> = Vec::with_capacity(tags.len());
@@ -369,6 +387,9 @@ fn dedupe(mut tags: Vec<Tag>) -> Vec<Tag> {
                 }
                 if tag.sym_kind.specificity() > last.sym_kind.specificity() {
                     last.sym_kind = tag.sym_kind;
+                }
+                if tag.kind.is_definition() {
+                    last.end_line = last.end_line.max(tag.end_line);
                 }
             }
             _ => out.push(tag),

@@ -6,6 +6,11 @@ use riptags::{OccKind, SymKind, Tag};
 fn tag(name: &str, line: u32, kind: OccKind, owners: &[&str]) -> Tag {
     Tag {
         line,
+        end_line: if kind.is_definition() {
+            line + 10
+        } else {
+            line
+        },
         col: 0,
         len: name.len() as u32,
         kind,
@@ -76,9 +81,12 @@ fn the_symbol_table_holds_each_symbol_once() {
     assert_eq!(
         alpha
             .slots()
-            .map(|(slot, kind)| (map.tag(slot).unwrap().line, kind))
+            .map(|(slot, kind)| {
+                let tag = map.tag(slot).unwrap();
+                (tag.line, tag.end_line, kind)
+            })
             .collect::<Vec<_>>(),
-        vec![(1, OccKind::Definition)]
+        vec![(1, 11, OccKind::Definition)]
     );
     assert_eq!(map.symbol("", "gamma").unwrap().occurrences(), 2);
     assert!(map.symbol("Missing", "alpha").is_none());

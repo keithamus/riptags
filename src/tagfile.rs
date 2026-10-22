@@ -21,11 +21,11 @@ use crate::symbol::{OccKind, SymKind, Tag};
 
 const MAGIC: u32 = 0x5347_5452;
 /// Layout revision. Bump when a section changes shape.
-const LAYOUT: u32 = 1;
+const LAYOUT: u32 = 2;
 
 const HEADER: usize = 44;
 const FILE_REC: usize = 32;
-const TAG_REC: usize = 36;
+const TAG_REC: usize = 40;
 const OWNER_REC: usize = 8;
 const SYM_REC: usize = 28;
 const POST_REC: usize = 4;
@@ -93,6 +93,7 @@ impl<'a> Iterator for OwnersIter<'a> {
 #[derive(Clone, Copy, Debug)]
 pub struct TagView<'a> {
     pub line: u32,
+    pub end_line: u32,
     pub col: u32,
     pub len: u32,
     pub kind: OccKind,
@@ -107,6 +108,7 @@ impl<'a> TagView<'a> {
     pub fn of(tag: &'a Tag) -> TagView<'a> {
         TagView {
             line: tag.line,
+            end_line: tag.end_line,
             col: tag.col,
             len: tag.len,
             kind: tag.kind,
@@ -361,6 +363,7 @@ impl TagFile {
         let context_len = u32le(record, 24);
         Some(TagView {
             line: u32le(record, 0),
+            end_line: u32le(record, 36),
             col: u32le(record, 4),
             len: u32le(record, 8),
             kind: OccKind::from_byte(record[32]),
@@ -478,6 +481,7 @@ impl TagFileWriter {
         );
         self.tags
             .extend([tag.kind as u8, tag.sym_kind as u8, owner_count, 0]);
+        put32(&mut self.tags, [tag.end_line]);
         if let Some((_, count)) = &mut self.open_file {
             *count += 1;
         }

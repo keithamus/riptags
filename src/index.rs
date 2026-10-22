@@ -154,6 +154,7 @@ pub struct IndexStats {
 pub struct SymbolSite<'a> {
     pub path: &'a str,
     pub line: u32,
+    pub end_line: u32,
     pub col: u32,
     pub len: u32,
     pub kind: OccKind,
@@ -167,6 +168,7 @@ impl<'a> SymbolSite<'a> {
         SymbolSite {
             path,
             line: tag.line,
+            end_line: tag.end_line,
             col: tag.col,
             len: tag.len,
             kind: tag.kind,

@@ -59,6 +59,14 @@ fn rust_definition_is_owned_by_its_impl() {
     assert_eq!(def.sym_kind, SymKind::Function);
     assert_eq!(def.symbols(), vec!["ApiError#bad_request", "#bad_request"]);
     assert_eq!(def.line, 7);
+    assert_eq!(def.end_line, 9, "the closing brace of the body");
+
+    let declared = find(&tags, "fail", OccKind::Declaration);
+    assert_eq!(declared.len(), 1);
+    assert_eq!(declared[0].end_line, declared[0].line);
+
+    let calls = find(&tags, "bad_request", OccKind::Call);
+    assert!(calls.iter().all(|call| call.end_line == call.line));
 }
 
 #[test]
@@ -255,6 +263,13 @@ fn python_methods_are_owned_by_their_class() {
         "a def in a class body is a method"
     );
     assert_eq!(defs[0].context.as_deref(), Some("Db"));
+    assert_eq!((defs[0].line, defs[0].end_line), (13, 14));
+    let class = find(&tags, "Db", OccKind::Definition);
+    assert_eq!(
+        (class[0].line, class[0].end_line),
+        (7, 14),
+        "an indented body ends on its last statement, not the blank lines after"
+    );
 
     let calls = find(&tags, "get", OccKind::Call);
     assert_eq!(calls.len(), 2, "`self.get()` and `Db().get()`");

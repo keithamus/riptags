@@ -212,6 +212,9 @@ impl<'a> Symbol<'a> {
 pub struct Tag {
     /// 1-based line number.
     pub line: u32,
+    /// 1-based line the definition's syntax node ends on, so a body can be
+    /// shown or folded whole. Equals `line` for other occurrences.
+    pub end_line: u32,
     /// 0-based character offset within the line.
     pub col: u32,
     /// Length in characters.
