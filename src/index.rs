@@ -87,9 +87,12 @@ impl Default for IndexOptions {
 impl IndexOptions {
     /// Whether a file at `path` with `size` bytes is indexed.
     pub fn covers(&self, path: &str, size: u64) -> bool {
-        size <= self.max_file_bytes as u64
-            && LangId::of_path(path).is_some()
-            && !self.excludes(path)
+        size <= self.max_file_bytes as u64 && self.covers_path(path)
+    }
+
+    /// Whether a file at `path` is indexed, whatever its size.
+    pub fn covers_path(&self, path: &str) -> bool {
+        LangId::of_path(path).is_some() && !self.excludes(path)
     }
 
     pub fn excludes(&self, path: &str) -> bool {

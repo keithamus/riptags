@@ -103,8 +103,11 @@ impl<'a> Walk<'a> {
             return None;
         }
         let path = self.relative(entry.path())?;
+        if !self.opts.covers_path(&path) {
+            return None;
+        }
         let stat = entry.metadata().ok()?;
-        if !self.opts.covers(&path, stat.len()) {
+        if stat.len() > self.opts.max_file_bytes as u64 {
             return None;
         }
         let mtime_ns = stat
