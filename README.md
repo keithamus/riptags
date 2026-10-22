@@ -36,7 +36,7 @@ be agonising.
 `riptags` tries to hit a usable middleground. It builds an index like ctags, but
 tries to do so quickly, and transparently. It's like if you took ripgrep and
 ctags and said "now kiss". A similar degree of accuracy to ctags but with the
-speed & ease of use as ripgrep.
+speed & ease of use of ripgrep.
 
 Calling `rt <term>` searches for the term while building a fast binary index in
 the background. Calling `rt <term>` again then yields better results in even
@@ -69,7 +69,7 @@ references (2)
   crates/render/src/text.rs:88:20  [flatten] out.push(node.to_string());
 ```
 
-Each site carries the thing that encloses it in brackets, so you can see which
+Each site shows the symbol that encloses it in brackets, so you can see which
 function or class a callsite lives in without opening the file.
 
 ## Install
@@ -172,8 +172,8 @@ and `--func`, `--meth`, `--iface`, `--mod`, `--const`, `--var` for the kinds.
 
 ### Which files are searched
 
-By default, all hidden files are skipped, by reading `.gitignore` and/or
-`.ignore`. Also anything over 1MB is left out. This can of course be tweaked:
+By default, hidden files and anything matched by `.gitignore` or `.ignore` are
+skipped, as is anything over 1MB. This can of course be tweaked:
 
 ```bash
 rt bad_request --hidden          # dotted files and directories as well
@@ -201,11 +201,11 @@ Like `ripgrep`, `rt` output can be piped into other commands making it easy to,
 for example, open a list of files in nvim. `--vimgrep` is the grep line format
 every editor (like vim or nvim) already reads, while `-l`
 (`--files-with-matches`) is just the list of files, so useful for e.g. `xargs`
-or `git`. Zero results exits 1 so the reader stops early rather than giving you
-a blank terminal.
+or `git`. Zero results exits 1, so a pipeline stops early rather than giving
+you a blank terminal.
 
 For vim pros something like `nvim -q <(rt bad_request --vimgrep)` will open
-every site as a quickfix list so your can `:cnext` your way through. Set
+every site as a quickfix list so you can `:cnext` your way through. Set
 `:set grepprg=rt\ --vimgrep grepformat=%f:%l:%c:%m` and vim's `:grep` turns into
 a symbol search.
 
@@ -298,7 +298,7 @@ costs about as much to read as a rare one.
 
 An agent only reaches for the tools it has been told about, so you'll need to
 configure your tooling. `rt --skill` prints a skill sheet that you can funnel
-into your agents skills directory:
+into your agent's skills directory:
 
 ```bash
 # Claude Code, for every project
@@ -312,7 +312,7 @@ mkdir -p ~/.config/opencode/skills/riptags && rt --skill > ~/.config/opencode/sk
 ```
 
 If your agent doesn't do skills, or you want a more concise version, try this
-if your `AGENTS.md`:
+to your `AGENTS.md`:
 
 ```markdown
 ## Finding code
@@ -329,8 +329,8 @@ riptags uses [tree-sitter] to support two dozen languages, so it works across
 different codebases.
 
 The index is built in memory and saved to disk through the `memmap2` crate.
-Reading it means literally yeeting bytes from disk into RAM: no serialisation
-overhead, as fast as your disk is.
+Reading it means literally yeeting bytes from disk into RAM, so there's no
+serialisation overhead and it's as fast as your disk is.
 
 Beside the tags sits a symbol table, sorted by name and then by owner, where
 each symbol holds the list of tags that mention it. Looking a symbol up is a
@@ -344,18 +344,18 @@ nothing takes about seven seconds.
 
 ## Staying current
 
-Queries will always start with the index, even if it's stale, if it exists it's
-checked, this keeps search in the sub-milliseconds. However:
+Queries always start from the existing index, even a stale one, which keeps
+search in the sub-milliseconds. However:
 
-- A query that finds nothing checks the tree before it says so, because the most
-  likely reason for a miss is code written since the index was built. This means
-  some searches may take a bit longer, but you probably want an answer and don't
-  mind waiting slightly longer.
+- A query that finds nothing checks the tree before reporting a miss, because
+  the most likely reason for a miss is code written since the index was built.
+  This means some searches may take a bit longer, but you probably want an
+  answer and don't mind waiting slightly longer.
 - After answering, a query refreshes the index in the background if nothing has
-  checked the tree in the last half minute. This means that likely the _next_
-  time you query, you'll have a fresh index.
+  checked the tree in the last half minute, so the _next_ time you query you'll
+  likely have a fresh index.
 - If you _really need_ a fresh index and don't mind waiting first, running
-  `rt --fresh <term>` checks first and answers from the result.
+  `rt --fresh <term>` checks the tree before searching.
 
 If you're actively working in a tree you can keep the index up to date by
 leaving a watcher running. This is helpful for exceptionally large trees where
@@ -372,7 +372,7 @@ It reparses what changed shortly after each burst of edits settles, so queries
 stay both instant and current. One watcher will lock the cache so a second
 `--watch` task will refuse to run, rather than fighting the first. A watch costs
 one kernel file watch per directory, and on a tree large enough to exhaust them
-the watcher says so and checks the tree on a timer instead.
+the watcher reports it and checks the tree on a timer instead.
 
 ## Embedding riptags
 
@@ -381,16 +381,16 @@ granularity:
 
 - `file_spans` tags a single file and needs nothing but its source, so a
   viewer can make identifiers clickable immediately.
-- `SymbolIndex` cross-references a set of files, which answers "where is this
-  defined" and "find all callsites".
-- `Cache::of(root).query(opts, Freshness::Index)` answers from the index on
-  disk as it stands and `Freshness::Checked` answers after checking the tree;
-  either way what it had to parse is written back. `Cache::refresh` brings the
-  index up to the tree on a background thread.
+- `SymbolIndex` cross-references a set of files, to find where something is
+  defined and every callsite.
+- `Cache::of(root).query(opts, Freshness::Index)` queries the index on disk as
+  it stands, and `Freshness::Checked` checks the tree first; either way, what it
+  had to parse is written back. `Cache::refresh` brings the index up to date on
+  a background thread.
 - `watch::run` keeps the index current while the tree is edited.
 
-An index of something that cannot change, such as a commit, is not the cache's
-business: `SymbolIndex::store_to` writes one to a path you choose and
+An index of something that cannot change, such as a commit, lives outside the
+cache. `SymbolIndex::store_to` writes one to a path you choose and
 `SymbolIndex::mapped_at` maps it back, so you can key it by whatever
 identifies it.
 
@@ -402,7 +402,7 @@ riptags = { version = "0.1", default-features = false, features = ["rust", "type
 ```
 
 A narrow build compiles only the grammars it names, and `Lang::of_path` then
-answers `None` for the languages left out. Without `rayon` the crate walks,
+returns `None` for the languages left out. Without `rayon` the crate walks,
 reads and parses on one thread.
 
 [ripgrep]: https://github.com/BurntSushi/ripgrep
