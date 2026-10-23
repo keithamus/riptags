@@ -79,12 +79,12 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           chmod +x target/${{ matrix.target }}/release/rt
-          tar -czf rt-${{ matrix.code-target }}.tar.gz -C target/${{ matrix.target }}/release rt
+          tar -czf rt-${{ matrix.code-target }}.tar.gz -C target/${{ matrix.target }}/release rt -C "$GITHUB_WORKSPACE" LICENSE
 
       - name: Archive binary
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Compress-Archive -Path target/${{ matrix.target }}/release/rt.exe -DestinationPath rt-${{ matrix.code-target }}.zip
+        run: Compress-Archive -Path target/${{ matrix.target }}/release/rt.exe, LICENSE -DestinationPath rt-${{ matrix.code-target }}.zip
 
       - name: Upload archive
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
