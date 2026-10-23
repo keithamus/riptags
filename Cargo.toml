@@ -1,6 +1,6 @@
 [package]
 name = "riptags"
-version = "0.2.0"
+version = "0.2.2"
 edition = "2024"
 rust-version = "1.95"
 description = "Fast tree-sitter symbol search: definitions and cross-references across a codebase"
