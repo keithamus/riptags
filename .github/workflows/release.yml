@@ -14,21 +14,33 @@ permissions:
 
 jobs:
   version:
-    name: Check tag matches crate version
+    name: Set crate version from tag
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.bump.outputs.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Check tag matches crate version
+      - name: Set version and commit to main
+        id: bump
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          crate=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
           tag=${GITHUB_REF_NAME#v}
+          crate=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
           if [ "$crate" != "$tag" ]; then
-            echo "tag $tag does not match Cargo.toml version $crate"
-            exit 1
+            sed -i "0,/^version = \".*\"/s//version = \"$tag\"/" Cargo.toml
+            cargo update --workspace
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -am "Release v$tag"
+            git push origin HEAD:refs/heads/main
+            git tag -f "$GITHUB_REF_NAME"
+            git push -f origin "refs/tags/$GITHUB_REF_NAME"
           fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   build:
     name: Package ${{ matrix.code-target }}
@@ -65,6 +77,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.version.outputs.sha || github.sha }}
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -119,7 +133,7 @@ jobs:
   publish:
     name: Publish to crates.io
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: release
+    needs: [version, release]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -127,6 +141,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.version.outputs.sha }}
 
       - name: Setup
         uses: ./.github/actions/setup
