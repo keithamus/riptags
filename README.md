@@ -1,5 +1,7 @@
 # riptags (rt)
 
+[![crates.io][crates-badge]][crates.io] [![brew][brew-badge]][brew] [![AUR][aur-badge]][AUR]
+
 `riptags` is a tool inspired by [ripgrep] and [ctags]. It helps you
 _semantically code search_ the current directory, by searching the ASTs, not
 text. If you don't know what that means, then let's think about the spectrum of
@@ -409,3 +411,9 @@ reads and parses on one thread.
 [ctags]: https://ctags.io
 [tree-sitter]: https://github.com/tree-sitter/tree-sitter
 [web-platform-tests]: https://github.com/web-platform-tests/wpt/
+[crates-badge]: https://img.shields.io/crates/v/riptags
+[crates.io]: https://crates.io/crates/riptags
+[brew-badge]: https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fraw.githubusercontent.com%2Fkeithamus%2Fhomebrew-tap%2Fmain%2FFormula%2Friptags.rb&search=%2Fv(%5Cd%2B%5C.%5Cd%2B%5C.%5Cd%2B)%2F&replace=v%241&label=brew
+[brew]: https://github.com/keithamus/homebrew-tap/blob/main/Formula/riptags.rb
+[aur-badge]: https://img.shields.io/aur/version/riptags-bin
+[AUR]: https://aur.archlinux.org/packages/riptags-bin
